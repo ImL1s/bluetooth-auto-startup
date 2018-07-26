@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">AutoStartUp</string>
+    <string name="open_bluetooth">藍牙尚未開啟,請先開啟藍芽</string>
+    <string name="chose_bluetooth_connected_start_app">選擇裝置連接時要啟動的應用</string>
+</resources>
