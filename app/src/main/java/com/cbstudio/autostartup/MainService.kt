@@ -34,19 +34,19 @@ class MainService : Service() {
 
     private val mActionDeviceMap = HashMap<BluetoothAddress, ApplicationIntent>()
 
-    private val mBroadcastReceiver = BroadcastReceiver()
+    private val mBroadcastReceiver by lazy { BroadcastReceiver() }
 
-    private val binder = Binder()
+    private val mBinder = Binder()
 
-    private lateinit var sharePreferences: SharedPreferences
+    private lateinit var mSharePreferences: SharedPreferences
 
 
     override fun onBind(intent: Intent?): IBinder? {
-        return binder
+        return mBinder
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        sharePreferences = getSharedPreferences(SHARE_PREFERENCES_NAME, Context.MODE_PRIVATE)
+        mSharePreferences = getSharedPreferences(SHARE_PREFERENCES_NAME, Context.MODE_PRIVATE)
         restoreActionMap()
         return START_STICKY
     }
@@ -58,13 +58,14 @@ class MainService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterReceiver(mBroadcastReceiver)
     }
 
     @SuppressLint("ApplySharedPref")
     private fun restoreActionMap() {
         try {
-            val bluetoothAddressSet = sharePreferences.getStringSet(SHARE_PREFERENCES_KEY_BLUETOOTH_ADDRESS, setOf()).toList()
-            val applicationPackageSet = sharePreferences.getStringSet(SHARE_PREFERENCES_KEY_APPLICATION_INTENT, setOf()).toList()
+            val bluetoothAddressSet = mSharePreferences.getStringSet(SHARE_PREFERENCES_KEY_BLUETOOTH_ADDRESS, setOf()).toList()
+            val applicationPackageSet = mSharePreferences.getStringSet(SHARE_PREFERENCES_KEY_APPLICATION_INTENT, setOf()).toList()
 
             var index = 0
             bluetoothAddressSet.forEach { bluetoothAddress ->
@@ -72,15 +73,17 @@ class MainService : Service() {
                 mActionDeviceMap[bluetoothAddress] = packageManager.getLaunchIntentForPackage(applicationPackageSet[index])
                 ++index
             }
+
             Log.d(DEBUG_TAG, "action map count: ${mActionDeviceMap.count()}")
             Log.d(DEBUG_TAG, "----------")
             mActionDeviceMap.forEach { bluetoothAddress, appIntent ->
                 Log.d(DEBUG_TAG, "bluetoothAddress: $bluetoothAddress appIntent: $appIntent")
             }
             Log.d(DEBUG_TAG, "----------")
+
         } catch (_: Exception) {
-            sharePreferences.edit().remove(SHARE_PREFERENCES_KEY_APPLICATION_INTENT).commit()
-            sharePreferences.edit().remove(SHARE_PREFERENCES_KEY_BLUETOOTH_ADDRESS).commit()
+            mSharePreferences.edit().remove(SHARE_PREFERENCES_KEY_APPLICATION_INTENT).commit()
+            mSharePreferences.edit().remove(SHARE_PREFERENCES_KEY_BLUETOOTH_ADDRESS).commit()
         }
     }
 
@@ -95,7 +98,9 @@ class MainService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             val state = intent.getIntExtra(BluetoothAdapter.EXTRA_CONNECTION_STATE, BluetoothAdapter.ERROR)
             val stateChangeDevice = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-            Log.d(DEBUG_TAG, "bluetooth connection state has changed: device name is ${stateChangeDevice.name}, state is $state")
+            Log.d(DEBUG_TAG, "bluetooth connection state has changed: " +
+                    "device name is ${stateChangeDevice.name}, state is $state")
+
             when (state) {
                 BluetoothAdapter.STATE_CONNECTED -> {
                     mActionDeviceMap.forEach { bluetoothAddress, applicationIntent ->
@@ -115,7 +120,8 @@ class MainService : Service() {
     public inner class Binder : android.os.Binder() {
 
         fun addActionDevice(device: BluetoothDevice, applicationDesc: ApplicationDescription) {
-            Log.d(DEBUG_TAG, "bind device with action, device ${device.name}(${device.address}) " +
+            Log.d(DEBUG_TAG, "bind device with action, " +
+                    "device ${device.name}(${device.address}) " +
                     "application name: ${applicationDesc.name}")
 
             mActionDeviceMap[device.address] = applicationDesc.intent!!
@@ -125,7 +131,7 @@ class MainService : Service() {
         @SuppressLint("ApplySharedPref")
         private fun writeToSharePreferences() {
             val job = launch(CommonPool) {
-                sharePreferences.edit()
+                mSharePreferences.edit()
                         .putStringSet(
                                 SHARE_PREFERENCES_KEY_BLUETOOTH_ADDRESS,
                                 mActionDeviceMap.keys.toSet()

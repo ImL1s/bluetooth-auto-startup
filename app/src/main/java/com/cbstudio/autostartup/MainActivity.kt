@@ -14,6 +14,7 @@ import android.util.Log
 import android.widget.AdapterView.OnItemClickListener
 import android.widget.ArrayAdapter
 import androidx.core.widget.toast
+import com.google.android.gms.ads.*
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.rxkotlin.toObservable
@@ -28,6 +29,8 @@ class MainActivity : AppCompatActivity() {
 
 
     private lateinit var mBluetoothAdapter: BluetoothAdapter
+
+    private lateinit var mInterstitialAd: InterstitialAd
 
     private val mDeviceMap = HashMap<String, BluetoothDevice>()
 
@@ -50,6 +53,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        setupAd()
+
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         if (bluetoothAdapter != null) {
             mBluetoothAdapter = bluetoothAdapter
@@ -69,6 +74,29 @@ class MainActivity : AppCompatActivity() {
             startService(serviceIntent)
             bindService(serviceIntent, mServiceConnection, Context.BIND_AUTO_CREATE)
         }
+    }
+
+    private fun setupAd() {
+        //        ad_view.adSize = AdSize.BANNER
+        //        ad_view.adUnitId = "ca-app-pub-7147633290594636/8980134535"
+        MobileAds.initialize(this, "ca-app-pub-7147633290594636~9171706224")
+
+        val adView = AdView(this)
+        adView.adSize = AdSize.BANNER
+        adView.adUnitId = getString(R.string.banner_ad_unit_id)
+        ll_main.addView(adView)
+        adView.loadAd(AdRequest.Builder().build())
+//        adView.loadAd(AdRequest.Builder().addTestDevice("FA2D5325B1C6818FE2EA2FCB18578281").build())
+        //        ad_view.loadAd(AdRequest.Builder().addTestDevice("FA2D5325B1C6818FE2EA2FCB18578281").build())
+
+
+        // for interstitial AD test
+//        btn_test.setOnClickListener {
+//            mInterstitialAd = InterstitialAd(this)
+//            mInterstitialAd.adUnitId = "ca-app-pub-7147633290594636/461912165"
+//            mInterstitialAd.loadAd(AdRequest.Builder().addTestDevice("FA2D5325B1C6818FE2EA2FCB18578281").build())
+//            mInterstitialAd.show()
+//        }
     }
 
     private fun setupDeviceListView() {
